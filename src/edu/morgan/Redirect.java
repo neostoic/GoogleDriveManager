@@ -32,8 +32,9 @@ public class Redirect extends HttpServlet {
             out.println("</div>");
             out.println("</body>");
             out.println("</html>");
-            GlobalSingleton.getInstance().setDrive(new GoogleDrive());
-            response.sendRedirect(GlobalSingleton.getInstance().getDrive().getAuthorizationUrl());
+            GoogleDrive drive = new GoogleDrive();
+            request.setAttribute("drive", drive);
+            response.sendRedirect(drive.getAuthorizationUrl());
         }
         catch(Exception ex){
         	ex.printStackTrace();

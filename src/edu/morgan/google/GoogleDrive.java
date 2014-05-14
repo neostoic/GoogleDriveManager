@@ -5,7 +5,6 @@ package edu.morgan.google;
  * and open the template in the editor.
  */
 
-import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.HttpTransport;
@@ -29,6 +28,7 @@ public class GoogleDrive {
     private static final String CLIENT_SECRET = "NGVNLhbRJhUGUVSAJEgrikUx";
     private static String REDIRECT_URI = "http://1-dot-morgansudrive.appspot.com/Home";
     private static String AUTHORIZATION_URL; 
+    private static String GOOGLE_TOKEN; 
 	private HttpTransport httpTransport;
     private JsonFactory jsonFactory;
     private GoogleAuthorizationCodeFlow flow;
@@ -51,7 +51,8 @@ public class GoogleDrive {
     }
     
     public void setCode(String code){
-        this.setService(new Drive.Builder(this.httpTransport, this.jsonFactory, new GoogleCredential().setAccessToken(code)).setApplicationName("Files Organized").build());
+    	GOOGLE_TOKEN = code;
+        this.setService(new Drive.Builder(this.httpTransport, this.jsonFactory, new GoogleCredential().setAccessToken(GOOGLE_TOKEN)).setApplicationName("Files Organized").build());
         /*
     	try {
 	    	GoogleTokenResponse response = this.flow.newTokenRequest(code).setRedirectUri(REDIRECT_URI).execute();
@@ -62,6 +63,10 @@ public class GoogleDrive {
 			e.printStackTrace();
 		}
 		*/
+    }
+    
+    public String getCode(){
+    	return GOOGLE_TOKEN;
     }
     
     public String getAuthorizationUrl(){

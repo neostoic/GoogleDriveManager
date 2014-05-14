@@ -18,9 +18,13 @@ public class Home extends HttpServlet {
         try {
         	PrintWriter out = response.getWriter();
         	String googleToken = request.getParameter("code");
+        	//GoogleDrive drive = (GoogleDrive)request.getAttribute("drive");
         	
         	if(googleToken != null){
-        		GlobalSingleton.getInstance().getDrive().setCode(googleToken);
+        		//GlobalSingleton.getInstance().getDrive().setCode(googleToken);
+        		//drive.setCode(googleToken);
+        		//request.removeAttribute("drive");
+        		//request.setAttribute("drive", drive);
         		
 	            out.println("<!DOCTYPE html>");
 	            out.println("<html>");
@@ -35,9 +39,9 @@ public class Home extends HttpServlet {
 	            out.println("<h3 align='center'>Do NOT use Internet Explorer. Use Google Chrome or Firefox instead.</h3>\n");
 	            out.println("<h4 align='center'>Select File to Upload: </h4><br/>");
 	            out.println("<div class='container' style='width:250px'>");
-	            out.println("	<form action='/UploadFile' method='POST' enctype='multipart/form-data'>");
-	            out.println("		<input type='file' name='file'/><br/>");
-	            out.println("		<button class='btn btn-primary' style='width:230px'>Submit</button>");
+	            out.println("	<form action='UploadFile?code="+ googleToken +"' method='post' enctype='multipart/form-data'>");
+	            out.println("		<input type='file' name='dataFile' id='fileChooser' /><br/>");
+	            out.println("		<input type='submit' value='Send' class='btn btn-primary' style='width:230px' />");
 	            out.println("	</form>");
 	            out.println("</div>");
 	            
