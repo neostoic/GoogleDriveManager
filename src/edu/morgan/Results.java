@@ -55,7 +55,7 @@ public class Results extends HttpServlet {
         
         out.println("Student list:");
         
-        for( File file :drive.getStudentFiles(new String[]{studentList.get(0).getLastName(), studentList.get(0).getFirstName(), studentList.get(0).getId(), "high", "school"}) )
+        for(File file :drive.getStudentFiles(new String[]{studentList.get(0).getLastName(), studentList.get(0).getFirstName(), studentList.get(0).getId(), "high", "school"}) )
         	out.println(file.getTitle());
         /*
         for(IncompleteStudent student : studentList)

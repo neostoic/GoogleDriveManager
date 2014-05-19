@@ -5,8 +5,11 @@ package edu.morgan.google;
  * and open the template in the editor.
  */
 
+import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -15,6 +18,7 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.ParentReference;
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 
 import edu.morgan.student.IncompleteStudent;
 
@@ -26,12 +30,13 @@ public class GoogleDrive {
 ///*
 	private static final String CLIENT_ID = "531888765455-d9dq5ldokro9ahi5pjrc56gpolidn35f.apps.googleusercontent.com";
     private static final String CLIENT_SECRET = "NGVNLhbRJhUGUVSAJEgrikUx";
-    private static String REDIRECT_URI = "http://1-dot-morgansudrive.appspot.com/Home";
+    private static String REDIRECT_URI = "http://localhost:8888/Home";
     private static String AUTHORIZATION_URL; 
     private static String GOOGLE_TOKEN; 
 	private HttpTransport httpTransport;
     private JsonFactory jsonFactory;
     private GoogleAuthorizationCodeFlow flow;
+    private Credential credential;
 //*/
     private Drive service;
 
@@ -51,18 +56,27 @@ public class GoogleDrive {
     }
     
     public void setCode(String code){
+    	///*
     	GOOGLE_TOKEN = code;
-        this.setService(new Drive.Builder(this.httpTransport, this.jsonFactory, new GoogleCredential().setAccessToken(GOOGLE_TOKEN)).setApplicationName("Files Organized").build());
-        /*
+        //this.setService(new Drive.Builder(this.httpTransport, this.jsonFactory, new GoogleCredential().setAccessToken(GOOGLE_TOKEN)).setApplicationName("Files Organized").build());
     	try {
-	    	GoogleTokenResponse response = this.flow.newTokenRequest(code).setRedirectUri(REDIRECT_URI).execute();
+	    	GoogleTokenResponse response = this.flow.newTokenRequest(GOOGLE_TOKEN).setRedirectUri(REDIRECT_URI).execute();
 			String accessToken = response.getAccessToken();
-	        credential = new GoogleCredential().setAccessToken(accessToken);
-	        this.setService(new Drive.Builder(this.httpTransport, this.jsonFactory, this.credential).setApplicationName("Admissions GoogleDrive Manager").build());
+	        this.credential = new GoogleCredential().setAccessToken(accessToken);
+	        this.setService(new Drive.Builder(this.httpTransport, this.jsonFactory, this.credential).setHttpRequestInitializer(new HttpRequestInitializer() {
+
+                @Override
+                public void initialize(HttpRequest httpRequest) throws IOException {
+
+                    credential.initialize(httpRequest);
+                    httpRequest.setConnectTimeout(300 * 60000);  // 3 minutes connect timeout
+                    httpRequest.setReadTimeout(300 * 60000);  // 3 minutes read timeout
+
+                }
+            }).setApplicationName("Admissions GoogleDrive Manager").build());
 	    } catch (IOException e) {
 			e.printStackTrace();
 		}
-		*/
     }
     
     public String getCode(){

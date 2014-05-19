@@ -33,7 +33,7 @@ public class Redirect extends HttpServlet {
             out.println("</body>");
             out.println("</html>");
             GoogleDrive drive = new GoogleDrive();
-            request.setAttribute("drive", drive);
+            //request.setAttribute("drive", drive);
             response.sendRedirect(drive.getAuthorizationUrl());
         }
         catch(Exception ex){
