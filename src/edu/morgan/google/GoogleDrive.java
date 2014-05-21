@@ -30,7 +30,7 @@ public class GoogleDrive {
 ///*
 	private static final String CLIENT_ID = "531888765455-d9dq5ldokro9ahi5pjrc56gpolidn35f.apps.googleusercontent.com";
     private static final String CLIENT_SECRET = "NGVNLhbRJhUGUVSAJEgrikUx";
-    private static String REDIRECT_URI = "http://localhost:8888/Home";
+    private static String REDIRECT_URI = "http://1-dot-morgansudrive.appspot.com/Home";
     private static String AUTHORIZATION_URL; 
     private static String GOOGLE_TOKEN; 
 	private HttpTransport httpTransport;

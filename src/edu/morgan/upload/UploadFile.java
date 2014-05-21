@@ -1,5 +1,6 @@
 package edu.morgan.upload;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -26,6 +27,7 @@ import com.google.api.services.drive.model.File;
 import edu.morgan.google.GoogleDrive;
 import edu.morgan.google.Start;
 import edu.morgan.student.IncompleteStudent;
+import edu.morgan.student.PrettyStudentPrint;
 
 public class UploadFile extends HttpServlet {
 	
@@ -40,7 +42,6 @@ public class UploadFile extends HttpServlet {
 
     @Override
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, java.io.IOException {
-    	RequestDispatcher rd;
     	try {
 			ServletFileUpload upload = new ServletFileUpload();
 			FileItemIterator iterator = upload.getItemIterator(request);
@@ -146,10 +147,7 @@ public class UploadFile extends HttpServlet {
 	}
     
     public void OrganizeFiles(GoogleDrive drive, PrintWriter out, ArrayList<IncompleteStudent> incompletestudents){
-        //Execute exec = new Execute();
-
-        //ArrayList<IncompleteStudent> studentsProcessed = new ArrayList<IncompleteStudent>();
-        //ArrayList<PrettyStudentPrint> prettyPrint = new ArrayList<PrettyStudentPrint>();
+        ArrayList<PrettyStudentPrint> prettyPrint = new ArrayList<PrettyStudentPrint>();
 
         try {
 
@@ -158,27 +156,28 @@ public class UploadFile extends HttpServlet {
             File autoFolder = drive.getCreateFolder(googleDriveFolders,"AUTO");
             
             for (IncompleteStudent student : incompletestudents) {
-                //PrettyStudentPrint psp = new PrettyStudentPrint(student.getLastName() + ", " + student.getFirstName() + ", " + student.getId());
+                PrettyStudentPrint psp = new PrettyStudentPrint(student.getLastName() + ", " + student.getFirstName() + ", " + student.getId());
 
                 // Get or Create Folder
                 File studentFolder = drive.getCreateFolder(googleDriveFolders, student.getLastName(), student.getFirstName(), student.getId());
 
-                out.println("<li>" + student.getLastName() + ", " + student.getFirstName() + " - " + ++counter + "</li>");
-
+                //out.println("<li>" + student.getLastName() + ", " + student.getFirstName() + " - " + ++counter + "</li>");
                 if (!student.getChecklist().equals("")) {
                     for (String checklistitem : student.getChecklist().split("::")) {
-                        ArrayList<File> tempFiles = new ArrayList<File>();
+                        ArrayList<File> tempFiles = new ArrayList<>();
                         String codeItem = "";
 
                         if (checklistitem.contains("act") && checklistitem.contains("sat") && checklistitem.contains("scores")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "scores", "sat", "act"});
                             if (!tempFiles.isEmpty()) {
-                                ////exec.organizeArray(prettyPrint, psp, "TSTS", "found");
-                                ////exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                //exec.organizeArray(prettyPrint, psp, "TSTS", "found");
+                                psp.setChecklistItem("TSTS", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "TSTS", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("TSTS", "not");
                         }
                         if (checklistitem.contains("scores")) {
                             if (checklistitem.contains("sat")) {
@@ -191,23 +190,27 @@ public class UploadFile extends HttpServlet {
                                 }
 
                                 if (!tempFiles.isEmpty()) {
-                                    //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                    //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                    //exec.organizeArray(prettyPrint, psp, codeItem, 
+                                    psp.setChecklistItem(codeItem, "found");
+                                    
                                     for (File file : tempFiles) {
                                         drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                     }
-                                }
+                                } else
+                                    psp.setChecklistItem(codeItem, "not");
                             }
 
                             if (checklistitem.contains("act")) {
                                 tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "scores", "act"});
                                 if (!tempFiles.isEmpty()) {
-                                    //exec.organizeArray(prettyPrint, psp, "TSTS", "found");
-                                    //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                    //exec.organizeArray(prettyPrint, psp, "TSTS", 
+                                    psp.setChecklistItem("TSTS", "found");
+                                    
                                     for (File file : tempFiles) {
                                         drive.MoveFiles(file, studentFolder, student, "TSTS", checklistitem);
                                     }
-                                }
+                                } else
+                                    psp.setChecklistItem("TSTS", "not");
                             }
                         }
                         if (checklistitem.contains("sat")) {
@@ -220,11 +223,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("fee")) {
                             if (checklistitem.contains("confirmation")) {
@@ -258,21 +263,25 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("waiver") && checklistitem.contains("application")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "waiver", "application"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "APW", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("APW", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "APW", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("APW", "not");
                         }
                         if (checklistitem.contains("detailed") && checklistitem.contains("eval")) {
                             if (checklistitem.contains("ece")) {
@@ -284,11 +293,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("recommendation")) {
                             if (checklistitem.contains("counselor")) {
@@ -300,11 +311,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("certificate")) {
                             if (checklistitem.contains("secondary") && checklistitem.contains("school")) {
@@ -328,48 +341,44 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
-                        }
-                        if (checklistitem.contains("essay") && checklistitem.contains("personal")) {
-                            tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "essay", "personal"});
-                            if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "ESSY", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
-                                for (File file : tempFiles) {
-                                    drive.MoveFiles(file, studentFolder, student, "ESSY", checklistitem);
-                                }
-                            } else {
-                                //exec.organizeArray(prettyPrint, psp, checklistitem, "not");
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("transcript")) {
                             codeItem = "";
                             if (checklistitem.contains("high") && checklistitem.contains("school")) {
                                 tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "high", "school", "transcript"});
+                                //tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "high", "school"});
                                 codeItem = "HST";
                             } else if (checklistitem.contains("official") && checklistitem.contains("college")) {
                                 tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "official", "college", "transcript"});
+                                //tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "official", "college"});
                                 codeItem = "CLT";
                             } else if (checklistitem.contains("unofficial")) {
                                 tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "unofficial", "transcript"});
+                                //tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "unofficial"});
                                 codeItem = "UNO";
                             } else if (checklistitem.contains("evaluation")) {
                                 tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "evaluation", "transcript"});
+                                //tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "evaluation"});
                                 codeItem = "TRNE";
                             }
                             if (!tempFiles.isEmpty()) {
                                 if (codeItem.equals("TRNE")) {
-                                    //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                    //exec.organizeArray(prettyPrint, psp, codeItem, 
+                                    psp.setChecklistItem(codeItem, "found");
                                 }
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("form")) {
                             if (checklistitem.contains("dd") && checklistitem.contains("214")) {
@@ -387,51 +396,73 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("affidavit") && checklistitem.contains("support")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "affidavit", "support"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "AOS", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("AOS", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "AOS", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("AOS", "not");
+                        }
+                        if (checklistitem.contains("essay") && checklistitem.contains("personal")) {
+                            tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "essay", "personal"});
+                            if (!tempFiles.isEmpty()) {
+                                //exec.organizeArray(prettyPrint, psp, "ESSY", "found");
+                                psp.setChecklistItem("ESSY", "found");
+                                
+                                for (File file : tempFiles) {
+                                    drive.MoveFiles(file, studentFolder, student, "ESSY", checklistitem);
+                                }
+                            } else
+                                psp.setChecklistItem("ESSY", "not");
                         }
                         if (checklistitem.contains("advanced") && checklistitem.contains("placement") && checklistitem.contains("board")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "advanced", "affidavit", "support"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "AP", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("AP", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "AP", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("AP", "not");
                         }
                         if (checklistitem.contains("civilian") && checklistitem.contains("millitary") && checklistitem.contains("person")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "civilian", "millitary", "person"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "BRAC", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("BRAC", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "BRAC", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("BRAC", "not");
                         }
                         if (checklistitem.contains("art") && checklistitem.contains("portfolio")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "art", "portfolio"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "ARTP", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("ARTP", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "ARTP", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("ARTP", "not");
                         }
                         if (checklistitem.contains("maryland")) {
                             if (checklistitem.contains("tax") && checklistitem.contains("return")) {
@@ -443,11 +474,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("educational") || checklistitem.contains("educ")) {
                             if (checklistitem.contains("individual") && checklistitem.contains("plan")) {
@@ -462,11 +495,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("letter")) {
                             if (checklistitem.contains("human") && checklistitem.contains("resources")) {
@@ -478,11 +513,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("international")) {
                             if (checklistitem.contains("student") && checklistitem.contains("application") || checklistitem.contains("app")) {
@@ -497,11 +534,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("level")) {
                             if (checklistitem.contains("gca") && checklistitem.contains("advance")) {
@@ -516,11 +555,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("passport")) {
                             if (checklistitem.contains("non")) {
@@ -532,11 +573,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("report") || checklistitem.contains("repo")) {
                             if (checklistitem.contains("grade") && checklistitem.contains("card")) {
@@ -548,11 +591,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("english")) {
                             if (checklistitem.contains("translation") && checklistitem.contains("records")) {
@@ -564,11 +609,13 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("approval")) {
                             if (checklistitem.contains("department")) {
@@ -580,247 +627,272 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, codeItem, "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem(codeItem, "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem(codeItem, "not");
                         }
                         if (checklistitem.contains("deferred") && checklistitem.contains("action") && checklistitem.contains("childhood")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "deferred", "action", "childhood"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "DACA", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("DACA", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "DACA", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("DACA", "not");
                         }
                         if (checklistitem.contains("employment") && checklistitem.contains("authorizaation")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "employment", "authorization"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "EAC", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("EAC", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "EAC", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("EAC", "not");
                         }
                         if (checklistitem.contains("confirmation") && checklistitem.contains("incentive")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "confirmation", "incentive"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "IEG", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("IEG", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "IEG", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("IEG", "not");
                         }
                         if (checklistitem.contains("graduate") && checklistitem.contains("diploma") && checklistitem.contains("equivalency")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "graduate", "diploma", "equivalency"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "GED", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("GED", "found");
+                                
                                 for (File file : tempFiles) {
-                                    drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
+                                    drive.MoveFiles(file, studentFolder, student, "GED", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("GED", "not");
                         }
                         if (checklistitem.contains("bank") && checklistitem.contains("statement")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "bank", "statement"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "BS", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("BS", "found");
+                                
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "BS", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("BS", "not");
                         }
                         if (checklistitem.contains("cambridge") && checklistitem.contains("proficiency") && checklistitem.contains("test")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "cambridge", "proficiency", "test"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "CPE", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("CPE", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "CPE", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("CPE", "not");
                         }
                         if (checklistitem.contains("i-20") && checklistitem.contains("student") && checklistitem.contains("visa")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "i-20", "student", "visa"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "F1", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("F1", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "F1", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("F1", "not");
                         }
                         if (checklistitem.contains("dream") && checklistitem.contains("act")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "dream", "act"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "I797", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("I797", "found");
                                 for (File file : tempFiles) {
-                                    drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
+                                    drive.MoveFiles(file, studentFolder, student, "I797", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("I797", "not");
                         }
                         if (checklistitem.contains("national") && checklistitem.contains("external") && checklistitem.contains("diploma")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "national", "external", "diploma"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "NEDP", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("NEDP", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "NEDP", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("NEDP", "not");
                         }
                         if (checklistitem.contains("paternal") && checklistitem.contains("consent")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "consent", "paternal"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "PAC", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("PAC", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "PAC", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("PAC", "not");
                         }
-                        if (checklistitem.contains("midyear") || checklistitem.contains("mid year") || checklistitem.contains("mid-year")  && checklistitem.contains("grade")) {
+                        if (checklistitem.contains("midyear") || checklistitem.contains("mid year") || checklistitem.contains("mid-year") && checklistitem.contains("grade")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "grade", "mid-year"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "MIDY", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("MIDY", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "MIDY", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("MIDY", "not");
                         }
                         if (checklistitem.contains("military") && checklistitem.contains("orders")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "military", "orders"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "MO", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("MO", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "MO", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("MO", "not");
                         }
                         if (checklistitem.contains("court") && checklistitem.contains("order")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "court", "order"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "COOR", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("COOR", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "COOR", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("COOR", "not");
                         }
                         if (checklistitem.contains("resume")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "resume"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "RESU", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("RESU", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "RESU", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("RESU", "not");
                         }
                         if (checklistitem.contains("residence") && checklistitem.contains("verification")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "residence", "verification"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "RSV", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("RSV", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "RSV", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("RSV", "not");
                         }
                         if (checklistitem.contains("world") && checklistitem.contains("education") || checklistitem.contains("educ")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "world", "education"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "WES1", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("WES1", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "WES1", checklistitem);
                                 }
-                            }
-                        } //
+                            } else
+                                psp.setChecklistItem("WES1", "not");
+                        } 
                         if (checklistitem.contains("toefl")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "toefl"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "TOEFL", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("TOEFL", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "TOEFL", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("TOEFL", "not");
                         }
                         if (checklistitem.contains("tax") && checklistitem.contains("return") && checklistitem.contains("personal")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "tax", "return", "personal"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "TAXP", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("TAXP", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "TAXP", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("TAXP", "not");
                         }
                         if (checklistitem.contains("test") && checklistitem.contains("spoken") && checklistitem.contains("english")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "test", "spoken", "english"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "TSE", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("TSE", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "TSE", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("TSE", "not");
                         }
                         if (checklistitem.contains("social") && checklistitem.contains("security")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "security", "social"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "SS", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("SS", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "SS", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("SS", "not");
                         }
                         if (checklistitem.contains("tax") && checklistitem.contains("return") && checklistitem.contains("personal")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "tax", "return", "personal"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "TAXP", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("TAXP", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "TAXP", checklistitem);
                                 }
-                            }
+                            } else 
+                                psp.setChecklistItem("TAXP", "not");
                         }
                         if (checklistitem.contains("i-551") && checklistitem.contains("permanent") || checklistitem.contains("perm") && checklistitem.contains("residence")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "residence", "permanent", "i-551"});
                             if (!tempFiles.isEmpty()) {
                                 //exec.organizeArray(prettyPrint, psp, "PRC", "found");
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
+                                psp.setChecklistItem("PRC", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "PRC", checklistitem);
                                 }
-                            }
+                            } else
+                                psp.setChecklistItem("PRC", "not");
                         }
                         if (checklistitem.contains("official") && checklistitem.contains("exam")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "official", "exam", "sssce"});
-                            codeItem = "";
                             if (!tempFiles.isEmpty()) {
-                                codeItem = "OFEX";
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
                                 for (File file : tempFiles) {
-                                    drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
+                                    drive.MoveFiles(file, studentFolder, student, "OFEX", checklistitem);
                                 }
                             }
 
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "official", "exam", "sce"});
                             if (!tempFiles.isEmpty()) {
                                 codeItem = "OFEX";
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
@@ -829,7 +901,6 @@ public class UploadFile extends HttpServlet {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "official", "exam", "waec"});
                             if (!tempFiles.isEmpty()) {
                                 codeItem = "OFEX";
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
@@ -838,7 +909,6 @@ public class UploadFile extends HttpServlet {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "official", "exam", "cxc"});
                             if (!tempFiles.isEmpty()) {
                                 codeItem = "OFEX";
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
@@ -847,19 +917,21 @@ public class UploadFile extends HttpServlet {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "official", "exam", "gde"});
                             if (!tempFiles.isEmpty()) {
                                 codeItem = "OFEX";
-                                //exec.changeChecklist(studentsProcessed, checklistitem, student);
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, codeItem, checklistitem);
                                 }
                             }
 
                             if (!codeItem.equals("")) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                psp.setChecklistItem(codeItem, "found");
+                            } else if (codeItem.equals("")) {
+                                psp.setChecklistItem(codeItem, "not");
                             }
                         }
                     }
 
                 }
+                prettyPrint.add(psp);
                 drive.MoveFiles(studentFolder, autoFolder);
             }
 
@@ -874,4 +946,34 @@ public class UploadFile extends HttpServlet {
             Logger.getLogger(Start.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+    
+    public static byte[] printArray(ArrayList<PrettyStudentPrint> pspArray) throws IOException{
+    	StringBuffer buffer = new StringBuffer();
+    	String[] tags = {"TSTS", "S05", "SAT", "S01", "S02", "IE11", "IE37", "IE75", "IEW", "IEX", "APO", "APH", "AP25", "APW", "AUD2", "AUDE", "LRE2", "LRE1", "SSC", "COBC", "COMC", "FC", "CON", "CER", "HST", "CLT", "UNO", "TRNE", "D214", "RESP", "ASG", "TREL", "AOS", "ESSY", "AP", "BRAC", "ARTP", "COMT", "MAD", "IEP", "ECE1", "MDHR", "REF3", "ISA", "IELT", "SUPP", "GCEA", "GCEO", "CLEP", "PASS", "COPS", "GRR", "GRRP", "ETR", "ESL", "DEPA", "DEPD", "DACA", "EAC", "IEG", "GED", "BS", "CPE", "F1", "I797", "NEDP", "PAC", "MIDY", "MO", "COOR", "RESU", "RSV", "WES1", "TOEFL", "TAXP", "TSE", "SS", "TAXP", "PRC", "OFEX"};
+    	
+    	
+    	buffer.append("Last Name, First Name, Morgan ID, TSTS, S05, SAT, S01, S02, IE11, IE37, IE75, " + 
+                "IEW, IEX, APO, APH, AP25, APW, AUD2, AUDE, LRE2, LRE1, SSC, COBC, COMC, FC, CON, " +
+                "CER, HST, CLT, UNO, TRNE, D214, RESP, ASG, TREL, AOS, ESSY, AP, BRAC, ARTP, " +
+                "COMT, MAD, IEP, ECE1, MDHR, REF3, ISA, IELT, SUPP, GCEA, GCEO, CLEP, PASS, COPS, " +
+                "GRR, GRRP, ETR, ESL, DEPA, DEPD, DACA, EAC, IEG, GED, BS, CPE, F1, I797, NEDP, PAC, " +
+                "MIDY, MO, COOR, RESU, RSV, WES1, TOEFL, TAXP, TSE, SS, TAXP, PRC, OFEX\n");
+        
+        for(PrettyStudentPrint psp: pspArray){
+            buffer.append(psp.getStudentInfo());
+            for(String tag : tags){
+                if(psp.getChecklist().containsKey(tag))
+                	buffer.append(", " + psp.getChecklist().get(tag));
+                else
+                	buffer.append(",");
+            }
+            buffer.append("\n");
+        }
+        
+        byte[] bytes = buffer.toString().getBytes();
+
+        return bytes;
+    }
+    
 }
