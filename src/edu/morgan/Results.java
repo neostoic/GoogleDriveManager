@@ -14,7 +14,6 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.api.services.drive.model.File;
 
 import edu.morgan.google.GoogleDrive;
-import edu.morgan.google.Start;
 import edu.morgan.student.IncompleteStudent;
 
 public class Results extends HttpServlet {
@@ -813,7 +812,7 @@ public class Results extends HttpServlet {
             */
             out.println("<li><h3>All students processed. Total of students: " + counter + "</h3></li>");
         } catch (Exception ex) {
-            Logger.getLogger(Start.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Results.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }

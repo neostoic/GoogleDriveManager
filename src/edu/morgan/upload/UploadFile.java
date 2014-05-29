@@ -1,15 +1,17 @@
 package edu.morgan.upload;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -23,16 +25,26 @@ import org.apache.commons.fileupload.FileItemStream;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 import com.google.api.services.drive.model.File;
+import com.google.appengine.api.blobstore.BlobKey;
+import com.google.appengine.api.blobstore.BlobstoreService;
+import com.google.appengine.api.blobstore.BlobstoreServiceFactory;
+import com.google.appengine.api.files.AppEngineFile;
+import com.google.appengine.api.files.FileReadChannel;
+import com.google.appengine.api.files.FileService;
+import com.google.appengine.api.files.FileServiceFactory;
+import com.google.appengine.api.files.FileWriteChannel;
 
 import edu.morgan.google.GoogleDrive;
-import edu.morgan.google.Start;
 import edu.morgan.student.IncompleteStudent;
 import edu.morgan.student.PrettyStudentPrint;
 
 public class UploadFile extends HttpServlet {
 	
 	private static final long serialVersionUID = 1L;
-	ArrayList<IncompleteStudent> studentList = new ArrayList<IncompleteStudent>();
+	private ArrayList<IncompleteStudent> studentList = new ArrayList<IncompleteStudent>();
+	private ArrayList<PrettyStudentPrint> prettyPrint = new ArrayList<PrettyStudentPrint>();
+	private BlobKey blobKey;
+	//private BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
     
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, java.io.IOException {
@@ -42,6 +54,9 @@ public class UploadFile extends HttpServlet {
 
     @Override
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, java.io.IOException {
+    	response.setContentType("application/octet-stream");
+		response.setHeader("Content-Disposition", "attachment; filename=datafile.csv");
+		
     	try {
 			ServletFileUpload upload = new ServletFileUpload();
 			FileItemIterator iterator = upload.getItemIterator(request);
@@ -52,14 +67,11 @@ public class UploadFile extends HttpServlet {
 				if(!item.isFormField())
 					read(stream);
 			}
-			/*
-			request.setAttribute("studentlist", studentList);
-			rd = request.getRequestDispatcher("Results?code="+ request.getParameter("code"));
-			rd.forward(request, response);
-			*/
+			
 			GoogleDrive drive = new GoogleDrive();
 			drive.setCode(request.getParameter("code"));
 			
+			///*
 			PrintWriter out = response.getWriter();
 			
 			out.println("<!DOCTYPE html>");
@@ -79,20 +91,105 @@ public class UploadFile extends HttpServlet {
 	        
 	        out.println("Student list:");
 	        
+	        //*/
+	        
 	        /*
 	         * Call main method
 	         */
 			this.OrganizeFiles(drive, out, studentList);
 			
+			//this.OrganizeFiles(drive, studentList);
+			
+			byte[] bytes = this.printArray(this.prettyPrint);
+			
+			BlobstoreService bstore = this.saveCSVFile(bytes);
+			if(bstore != null)
+				bstore.serve(this.blobKey, response);
+			else{
+				RequestDispatcher rd = request.getRequestDispatcher("Error");
+    			rd.forward(request, response);
+			}
+			
+			///*
 			out.println("</div>");
 	        
 	        out.println("</body>");
 	        out.println("</html>");
-
+			//*/
+			
 		} catch (Exception ex) {
 			throw new ServletException(ex);
 		}
         
+    }
+    
+    public BlobstoreService saveCSVFile(byte[] bytes){
+    	try{
+	    	// Get a file service
+	    	FileService fileService = FileServiceFactory.getFileService();
+	
+	    	// Create a new Blob file with mime-type "text/plain"
+	    	AppEngineFile file = fileService.createNewBlobFile("text/csv");
+	
+	    	// Open a channel to write to it
+	    	boolean lock = false;
+	    	FileWriteChannel writeChannel = fileService.openWriteChannel(file, lock);
+	
+	    	// Different standard Java ways of writing to the channel
+	    	// are possible. Here we use a PrintWriter:
+	    	PrintWriter out = new PrintWriter(Channels.newWriter(writeChannel, "UTF8"));
+	    	out.print(bytes);
+	
+	    	// Close, finalize and save the file path for writing later
+	    	out.close();
+	    	writeChannel.closeFinally();
+	    	
+	    	/*
+	    	String path = file.getFullPath();
+	
+	    	// Write more to the file in a separate request:
+	    	file = new AppEngineFile(path);
+	
+	    	// This time lock because we intend to finalize
+	    	lock = true;
+	    	writeChannel = fileService.openWriteChannel(file, lock);
+	
+	    	// This time we write to the channel directly
+	    	writeChannel.write(ByteBuffer.wrap("And miles to go before I sleep.".getBytes()));
+	
+	    	// Now finalize
+	    	writeChannel.closeFinally();
+			*/
+	    	
+	    	
+	    	/*
+	    	// Later, read from the file using the Files API
+	    	lock = false; // Let other people read at the same time
+	    	FileReadChannel readChannel = fileService.openReadChannel(file, false);
+	
+	    	// Again, different standard Java ways of reading from the channel.
+	    	BufferedReader reader = new BufferedReader(Channels.newReader(readChannel, "UTF8"));
+	    	String line = reader.readLine();
+	    	// line = "The woods are lovely dark and deep."
+	
+	    	readChannel.close();
+			*/
+	    	
+	    	
+	    	// Now read from the file using the Blobstore API
+	    	this.blobKey = fileService.getBlobKey(file);
+	    	BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
+	    	return blobstoreService;
+	    	//blobstoreService.serve(blobKey, response);
+	    	/*
+	    	BlobstoreService blobStoreService = BlobstoreServiceFactory.getBlobstoreService();
+	    	String segment = new String(blobStoreService.fetchData(blobKey, 30, 40));
+	    	*/
+    	}
+    	catch(Exception e){
+    		e.getStackTrace();
+    		return null;
+    	}
     }
     
     public void read(InputStream inputFile) throws IOException {
@@ -147,8 +244,7 @@ public class UploadFile extends HttpServlet {
 	}
     
     public void OrganizeFiles(GoogleDrive drive, PrintWriter out, ArrayList<IncompleteStudent> incompletestudents){
-        ArrayList<PrettyStudentPrint> prettyPrint = new ArrayList<PrettyStudentPrint>();
-
+    //public void OrganizeFiles(GoogleDrive drive, ArrayList<IncompleteStudent> incompletestudents){
         try {
 
             ArrayList<File> googleDriveFolders = drive.getAllFolders();
@@ -161,16 +257,17 @@ public class UploadFile extends HttpServlet {
                 // Get or Create Folder
                 File studentFolder = drive.getCreateFolder(googleDriveFolders, student.getLastName(), student.getFirstName(), student.getId());
 
-                //out.println("<li>" + student.getLastName() + ", " + student.getFirstName() + " - " + ++counter + "</li>");
+                out.println("<li>" + student.getLastName() + ", " + student.getFirstName() + " - " + ++counter + "</li>");
+                
                 if (!student.getChecklist().equals("")) {
                     for (String checklistitem : student.getChecklist().split("::")) {
-                        ArrayList<File> tempFiles = new ArrayList<>();
+                        ArrayList<File> tempFiles = new ArrayList<File>();
                         String codeItem = "";
 
                         if (checklistitem.contains("act") && checklistitem.contains("sat") && checklistitem.contains("scores")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "scores", "sat", "act"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "TSTS", "found");
+                                
                                 psp.setChecklistItem("TSTS", "found");
                                 
                                 for (File file : tempFiles) {
@@ -190,7 +287,7 @@ public class UploadFile extends HttpServlet {
                                 }
 
                                 if (!tempFiles.isEmpty()) {
-                                    //exec.organizeArray(prettyPrint, psp, codeItem, 
+                                    
                                     psp.setChecklistItem(codeItem, "found");
                                     
                                     for (File file : tempFiles) {
@@ -203,7 +300,7 @@ public class UploadFile extends HttpServlet {
                             if (checklistitem.contains("act")) {
                                 tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "scores", "act"});
                                 if (!tempFiles.isEmpty()) {
-                                    //exec.organizeArray(prettyPrint, psp, "TSTS", 
+                                    
                                     psp.setChecklistItem("TSTS", "found");
                                     
                                     for (File file : tempFiles) {
@@ -222,7 +319,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "S02";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -262,7 +359,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "AP25";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -274,7 +371,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("waiver") && checklistitem.contains("application")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "waiver", "application"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "APW", "found");
+                                
                                 psp.setChecklistItem("APW", "found");
                                 
                                 for (File file : tempFiles) {
@@ -292,7 +389,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "AUDE";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -310,7 +407,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "LRE1";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -340,7 +437,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "CER";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -370,7 +467,7 @@ public class UploadFile extends HttpServlet {
                             }
                             if (!tempFiles.isEmpty()) {
                                 if (codeItem.equals("TRNE")) {
-                                    //exec.organizeArray(prettyPrint, psp, codeItem, 
+                                    
                                     psp.setChecklistItem(codeItem, "found");
                                 }
                                 
@@ -395,7 +492,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "TREL";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -407,7 +504,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("affidavit") && checklistitem.contains("support")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "affidavit", "support"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "AOS", "found");
+                                
                                 psp.setChecklistItem("AOS", "found");
                                 
                                 for (File file : tempFiles) {
@@ -419,7 +516,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("essay") && checklistitem.contains("personal")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "essay", "personal"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "ESSY", "found");
+                                
                                 psp.setChecklistItem("ESSY", "found");
                                 
                                 for (File file : tempFiles) {
@@ -431,7 +528,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("advanced") && checklistitem.contains("placement") && checklistitem.contains("board")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "advanced", "affidavit", "support"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "AP", "found");
+                                
                                 psp.setChecklistItem("AP", "found");
                                 
                                 for (File file : tempFiles) {
@@ -443,7 +540,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("civilian") && checklistitem.contains("millitary") && checklistitem.contains("person")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "civilian", "millitary", "person"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "BRAC", "found");
+                                
                                 psp.setChecklistItem("BRAC", "found");
                                 
                                 for (File file : tempFiles) {
@@ -455,7 +552,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("art") && checklistitem.contains("portfolio")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "art", "portfolio"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "ARTP", "found");
+                                
                                 psp.setChecklistItem("ARTP", "found");
                                 
                                 for (File file : tempFiles) {
@@ -473,7 +570,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "MAD";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -494,7 +591,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "ECE1";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -512,7 +609,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "REF3";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -533,7 +630,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "SUPP";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -554,7 +651,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "CLEP";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -572,7 +669,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "COPS";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -590,7 +687,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "GRRP";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -608,7 +705,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "ESL";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -626,7 +723,7 @@ public class UploadFile extends HttpServlet {
                                 codeItem = "DEPD";
                             }
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, codeItem, "found");
+                                
                                 psp.setChecklistItem(codeItem, "found");
                                 
                                 for (File file : tempFiles) {
@@ -638,7 +735,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("deferred") && checklistitem.contains("action") && checklistitem.contains("childhood")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "deferred", "action", "childhood"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "DACA", "found");
+                                
                                 psp.setChecklistItem("DACA", "found");
                                 
                                 for (File file : tempFiles) {
@@ -650,7 +747,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("employment") && checklistitem.contains("authorizaation")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "employment", "authorization"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "EAC", "found");
+                                
                                 psp.setChecklistItem("EAC", "found");
                                 
                                 for (File file : tempFiles) {
@@ -662,7 +759,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("confirmation") && checklistitem.contains("incentive")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "confirmation", "incentive"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "IEG", "found");
+                                
                                 psp.setChecklistItem("IEG", "found");
                                 
                                 for (File file : tempFiles) {
@@ -674,7 +771,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("graduate") && checklistitem.contains("diploma") && checklistitem.contains("equivalency")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "graduate", "diploma", "equivalency"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "GED", "found");
+                                
                                 psp.setChecklistItem("GED", "found");
                                 
                                 for (File file : tempFiles) {
@@ -686,7 +783,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("bank") && checklistitem.contains("statement")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "bank", "statement"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "BS", "found");
+                                
                                 psp.setChecklistItem("BS", "found");
                                 
                                 for (File file : tempFiles) {
@@ -698,7 +795,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("cambridge") && checklistitem.contains("proficiency") && checklistitem.contains("test")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "cambridge", "proficiency", "test"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "CPE", "found");
+                                
                                 psp.setChecklistItem("CPE", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "CPE", checklistitem);
@@ -709,7 +806,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("i-20") && checklistitem.contains("student") && checklistitem.contains("visa")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "i-20", "student", "visa"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "F1", "found");
+                                
                                 psp.setChecklistItem("F1", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "F1", checklistitem);
@@ -720,7 +817,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("dream") && checklistitem.contains("act")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "dream", "act"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "I797", "found");
+                                
                                 psp.setChecklistItem("I797", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "I797", checklistitem);
@@ -731,7 +828,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("national") && checklistitem.contains("external") && checklistitem.contains("diploma")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "national", "external", "diploma"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "NEDP", "found");
+                                
                                 psp.setChecklistItem("NEDP", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "NEDP", checklistitem);
@@ -742,7 +839,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("paternal") && checklistitem.contains("consent")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "consent", "paternal"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "PAC", "found");
+                                
                                 psp.setChecklistItem("PAC", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "PAC", checklistitem);
@@ -753,7 +850,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("midyear") || checklistitem.contains("mid year") || checklistitem.contains("mid-year") && checklistitem.contains("grade")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "grade", "mid-year"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "MIDY", "found");
+                                
                                 psp.setChecklistItem("MIDY", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "MIDY", checklistitem);
@@ -764,7 +861,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("military") && checklistitem.contains("orders")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "military", "orders"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "MO", "found");
+                                
                                 psp.setChecklistItem("MO", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "MO", checklistitem);
@@ -775,7 +872,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("court") && checklistitem.contains("order")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "court", "order"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "COOR", "found");
+                                
                                 psp.setChecklistItem("COOR", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "COOR", checklistitem);
@@ -786,7 +883,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("resume")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "resume"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "RESU", "found");
+                                
                                 psp.setChecklistItem("RESU", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "RESU", checklistitem);
@@ -797,7 +894,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("residence") && checklistitem.contains("verification")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "residence", "verification"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "RSV", "found");
+                                
                                 psp.setChecklistItem("RSV", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "RSV", checklistitem);
@@ -808,7 +905,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("world") && checklistitem.contains("education") || checklistitem.contains("educ")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "world", "education"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "WES1", "found");
+                                
                                 psp.setChecklistItem("WES1", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "WES1", checklistitem);
@@ -819,7 +916,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("toefl")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "toefl"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "TOEFL", "found");
+                                
                                 psp.setChecklistItem("TOEFL", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "TOEFL", checklistitem);
@@ -830,7 +927,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("tax") && checklistitem.contains("return") && checklistitem.contains("personal")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "tax", "return", "personal"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "TAXP", "found");
+                                
                                 psp.setChecklistItem("TAXP", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "TAXP", checklistitem);
@@ -841,7 +938,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("test") && checklistitem.contains("spoken") && checklistitem.contains("english")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "test", "spoken", "english"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "TSE", "found");
+                                
                                 psp.setChecklistItem("TSE", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "TSE", checklistitem);
@@ -852,7 +949,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("social") && checklistitem.contains("security")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "security", "social"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "SS", "found");
+                                
                                 psp.setChecklistItem("SS", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "SS", checklistitem);
@@ -863,7 +960,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("tax") && checklistitem.contains("return") && checklistitem.contains("personal")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "tax", "return", "personal"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "TAXP", "found");
+                                
                                 psp.setChecklistItem("TAXP", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "TAXP", checklistitem);
@@ -874,7 +971,7 @@ public class UploadFile extends HttpServlet {
                         if (checklistitem.contains("i-551") && checklistitem.contains("permanent") || checklistitem.contains("perm") && checklistitem.contains("residence")) {
                             tempFiles = drive.getStudentFiles(new String[]{student.getLastName(), student.getFirstName(), student.getId(), "residence", "permanent", "i-551"});
                             if (!tempFiles.isEmpty()) {
-                                //exec.organizeArray(prettyPrint, psp, "PRC", "found");
+                                
                                 psp.setChecklistItem("PRC", "found");
                                 for (File file : tempFiles) {
                                     drive.MoveFiles(file, studentFolder, student, "PRC", checklistitem);
@@ -931,24 +1028,18 @@ public class UploadFile extends HttpServlet {
                     }
 
                 }
-                prettyPrint.add(psp);
+                this.prettyPrint.add(psp);
                 drive.MoveFiles(studentFolder, autoFolder);
             }
-
-            // Generate new JSONFile
-            /*
-            incompletestudents.generateJSON(incompletestudents.convertToUsers(studentsProcessed), "BAFASE_new_min");
-            WriteCSVFile.printArray(prettyPrint);
-            WriteXMLFile.printArray(prettyPrint);
-            */
+            
             out.println("<li><h3>All students processed. Total of students: " + counter + "</h3></li>");
         } catch (Exception ex) {
-            Logger.getLogger(Start.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(UploadFile.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
     
-    public static byte[] printArray(ArrayList<PrettyStudentPrint> pspArray) throws IOException{
+    public byte[] printArray(ArrayList<PrettyStudentPrint> pspArray) throws IOException{
     	StringBuffer buffer = new StringBuffer();
     	String[] tags = {"TSTS", "S05", "SAT", "S01", "S02", "IE11", "IE37", "IE75", "IEW", "IEX", "APO", "APH", "AP25", "APW", "AUD2", "AUDE", "LRE2", "LRE1", "SSC", "COBC", "COMC", "FC", "CON", "CER", "HST", "CLT", "UNO", "TRNE", "D214", "RESP", "ASG", "TREL", "AOS", "ESSY", "AP", "BRAC", "ARTP", "COMT", "MAD", "IEP", "ECE1", "MDHR", "REF3", "ISA", "IELT", "SUPP", "GCEA", "GCEO", "CLEP", "PASS", "COPS", "GRR", "GRRP", "ETR", "ESL", "DEPA", "DEPD", "DACA", "EAC", "IEG", "GED", "BS", "CPE", "F1", "I797", "NEDP", "PAC", "MIDY", "MO", "COOR", "RESU", "RSV", "WES1", "TOEFL", "TAXP", "TSE", "SS", "TAXP", "PRC", "OFEX"};
     	

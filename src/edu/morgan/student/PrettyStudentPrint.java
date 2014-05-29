@@ -1,6 +1,6 @@
 package edu.morgan.student;
 
-import com.google.gwt.dev.util.collect.HashMap;
+import java.util.HashMap;
 
 public class PrettyStudentPrint {
     private String studentInfo;
