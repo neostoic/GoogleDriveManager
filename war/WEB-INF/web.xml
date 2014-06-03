@@ -36,6 +36,16 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
   </servlet-mapping>
   
   <servlet>
+    <servlet-name>DriveAdCom</servlet-name>
+    <servlet-class>edu.morgan.DriveAdCom</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>DriveAdCom</servlet-name>
+    <url-pattern>/DriveAdCom</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
     <servlet-name>Error</servlet-name>
     <servlet-class>edu.morgan.Error</servlet-class>
   </servlet>

@@ -9,8 +9,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import edu.morgan.google.GoogleDrive;
-
 public class Redirect extends HttpServlet {
 	
 	private static final long serialVersionUID = 1L;
@@ -23,24 +21,25 @@ public class Redirect extends HttpServlet {
             out.println("<html>");
             out.println("<head>");
             out.println("<title>Morgan Admissions - Web App</title>"); 
-            out.println("<link href='http://getbootstrap.com/dist/css/bootstrap.min.css' rel='stylesheet'/>");
+            //out.println("<link href='http://getbootstrap.com/dist/css/bootstrap.min.css' rel='stylesheet'/>");
+            //out.println("<style> img{display: block; margin: 0 auto;} </style>");
             out.println("</head>");
             out.println("<body style='background-color:#eee;'>");
+            out.println("	<div align='center' class='header container' style='width:700px'>");
+            out.println("		<img src='http://www.morgan.edu/images/shared/logo-headerRt.png' style='width: 700px; display: block; margin-left: auto; margin-right: auto;' />");
+            out.println("	</div>");
+            out.println("<h3 align='center'>Do NOT use Internet Explorer. Use Google Chrome or Mozilla Firefox instead.</h3>\n");
             out.println("<div class='container' style='width:700px;'>");
-            out.println("	<a href='' target='_blank'>MorganAdCom</a>");
+            out.println("	<h5 align='center'> <a href='https://1-dot-morganadcomm.appspot.com/index.jsp' target='_blank'>MorganAdCom</a>");
             out.println("	</br>");
             out.println("	</br>");
-            out.println("	<a href='' target='_blank'>DriveAdCom</a>");
-            out.println("	");
+            out.println("	<a href='/DriveAdCom' target='_blank'>DriveAdCom - Organize Google Drive folders based on a Excel. </a>");
+            out.println("	</h5>");
             out.println("	");
             out.println("	");
             out.println("</div>");
             out.println("</body>");
             out.println("</html>");
-            /*
-            GoogleDrive drive = new GoogleDrive();
-            response.sendRedirect(drive.getAuthorizationUrl());
-            */
         }
         catch(Exception ex){
         	ex.printStackTrace();
