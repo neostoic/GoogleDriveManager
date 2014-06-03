@@ -45,16 +45,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
     <url-pattern>/Error</url-pattern>
   </servlet-mapping>
   
-  <servlet>
-    <servlet-name>Results</servlet-name>
-    <servlet-class>edu.morgan.Results</servlet-class>
-  </servlet>
-  
-  <servlet-mapping>
-    <servlet-name>Results</servlet-name>
-    <url-pattern>/Results</url-pattern>
-  </servlet-mapping>
-  
   <!-- Default page to serve -->
   <welcome-file-list>
     <welcome-file>Redirect</welcome-file>

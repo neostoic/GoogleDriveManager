@@ -27,14 +27,20 @@ public class Redirect extends HttpServlet {
             out.println("</head>");
             out.println("<body style='background-color:#eee;'>");
             out.println("<div class='container' style='width:700px;'>");
-            out.println("   <h1 align='center'>Redirecting to Google authorization.</h1>\n");
-            out.println("   <h4 align='center'>Do NOT use Internet Explorer. Use Google Chrome or Firefox instead.</h4>\n");
+            out.println("	<a href='' target='_blank'>MorganAdCom</a>");
+            out.println("	</br>");
+            out.println("	</br>");
+            out.println("	<a href='' target='_blank'>DriveAdCom</a>");
+            out.println("	");
+            out.println("	");
+            out.println("	");
             out.println("</div>");
             out.println("</body>");
             out.println("</html>");
+            /*
             GoogleDrive drive = new GoogleDrive();
-            //request.setAttribute("drive", drive);
             response.sendRedirect(drive.getAuthorizationUrl());
+            */
         }
         catch(Exception ex){
         	ex.printStackTrace();

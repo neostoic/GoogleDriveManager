@@ -18,14 +18,8 @@ public class Home extends HttpServlet {
         try {
         	PrintWriter out = response.getWriter();
         	String googleToken = request.getParameter("code");
-        	//GoogleDrive drive = (GoogleDrive)request.getAttribute("drive");
         	
         	if(googleToken != null){
-        		//GlobalSingleton.getInstance().getDrive().setCode(googleToken);
-        		//drive.setCode(googleToken);
-        		//request.removeAttribute("drive");
-        		//request.setAttribute("drive", drive);
-        		
 	            out.println("<!DOCTYPE html>");
 	            out.println("<html>");
 	            out.println("<head>");

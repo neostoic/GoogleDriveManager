@@ -3,15 +3,12 @@ package edu.morgan.upload;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -25,14 +22,6 @@ import org.apache.commons.fileupload.FileItemStream;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 import com.google.api.services.drive.model.File;
-import com.google.appengine.api.blobstore.BlobKey;
-import com.google.appengine.api.blobstore.BlobstoreService;
-import com.google.appengine.api.blobstore.BlobstoreServiceFactory;
-import com.google.appengine.api.files.AppEngineFile;
-import com.google.appengine.api.files.FileReadChannel;
-import com.google.appengine.api.files.FileService;
-import com.google.appengine.api.files.FileServiceFactory;
-import com.google.appengine.api.files.FileWriteChannel;
 
 import edu.morgan.google.GoogleDrive;
 import edu.morgan.student.IncompleteStudent;
@@ -43,8 +32,6 @@ public class UploadFile extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private ArrayList<IncompleteStudent> studentList = new ArrayList<IncompleteStudent>();
 	private ArrayList<PrettyStudentPrint> prettyPrint = new ArrayList<PrettyStudentPrint>();
-	private BlobKey blobKey;
-	//private BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
     
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, java.io.IOException {
@@ -54,9 +41,6 @@ public class UploadFile extends HttpServlet {
 
     @Override
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, java.io.IOException {
-    	response.setContentType("application/octet-stream");
-		response.setHeader("Content-Disposition", "attachment; filename=datafile.csv");
-		
     	try {
 			ServletFileUpload upload = new ServletFileUpload();
 			FileItemIterator iterator = upload.getItemIterator(request);
@@ -71,136 +55,28 @@ public class UploadFile extends HttpServlet {
 			GoogleDrive drive = new GoogleDrive();
 			drive.setCode(request.getParameter("code"));
 			
-			///*
 			PrintWriter out = response.getWriter();
 			
-			out.println("<!DOCTYPE html>");
-	        out.println("<html>");
-	        out.println("<head>");
-	        out.println("<title>Morgan Admissions - Web App</title>"); 
-	        out.println("<link href='http://getbootstrap.com/dist/css/bootstrap.min.css' rel='stylesheet'/>");
-	        out.println("</head>");
-	        out.println("<body style='background-color:#eee;'>");
-	        out.println("	<div class='header container' style='width:700px'>");
-	        out.println("		<img src='http://www.morgan.edu/images/shared/logo-headerRt.png' style='width: 700px;' />");
-	        out.println("	</div>");
-	        
-	        out.println("<h3 align='center'>All set! Check your GoogleDrive account.</h3>\n");
-	        out.println("<h4 align='center'>Incomplete Students checked:" + studentList.size() + " </h4><br/>");
-	        out.println("<div class='container' style='width:250px'>");
-	        
-	        out.println("Student list:");
-	        
-	        //*/
-	        
-	        /*
-	         * Call main method
-	         */
-			this.OrganizeFiles(drive, out, studentList);
+			response.setContentType("application/octet-stream");
+			response.setHeader("Content-Disposition", "attachment; filename=datafile.csv");
 			
-			//this.OrganizeFiles(drive, studentList);
+			this.OrganizeFiles(drive, studentList);
 			
-			byte[] bytes = this.printArray(this.prettyPrint);
-			
-			BlobstoreService bstore = this.saveCSVFile(bytes);
-			if(bstore != null)
-				bstore.serve(this.blobKey, response);
-			else{
-				RequestDispatcher rd = request.getRequestDispatcher("Error");
-    			rd.forward(request, response);
-			}
-			
-			///*
-			out.println("</div>");
-	        
-	        out.println("</body>");
-	        out.println("</html>");
-			//*/
+			out.println(this.printArray(this.prettyPrint));
 			
 		} catch (Exception ex) {
 			throw new ServletException(ex);
 		}
         
     }
-    
-    public BlobstoreService saveCSVFile(byte[] bytes){
-    	try{
-	    	// Get a file service
-	    	FileService fileService = FileServiceFactory.getFileService();
-	
-	    	// Create a new Blob file with mime-type "text/plain"
-	    	AppEngineFile file = fileService.createNewBlobFile("text/csv");
-	
-	    	// Open a channel to write to it
-	    	boolean lock = false;
-	    	FileWriteChannel writeChannel = fileService.openWriteChannel(file, lock);
-	
-	    	// Different standard Java ways of writing to the channel
-	    	// are possible. Here we use a PrintWriter:
-	    	PrintWriter out = new PrintWriter(Channels.newWriter(writeChannel, "UTF8"));
-	    	out.print(bytes);
-	
-	    	// Close, finalize and save the file path for writing later
-	    	out.close();
-	    	writeChannel.closeFinally();
-	    	
-	    	/*
-	    	String path = file.getFullPath();
-	
-	    	// Write more to the file in a separate request:
-	    	file = new AppEngineFile(path);
-	
-	    	// This time lock because we intend to finalize
-	    	lock = true;
-	    	writeChannel = fileService.openWriteChannel(file, lock);
-	
-	    	// This time we write to the channel directly
-	    	writeChannel.write(ByteBuffer.wrap("And miles to go before I sleep.".getBytes()));
-	
-	    	// Now finalize
-	    	writeChannel.closeFinally();
-			*/
-	    	
-	    	
-	    	/*
-	    	// Later, read from the file using the Files API
-	    	lock = false; // Let other people read at the same time
-	    	FileReadChannel readChannel = fileService.openReadChannel(file, false);
-	
-	    	// Again, different standard Java ways of reading from the channel.
-	    	BufferedReader reader = new BufferedReader(Channels.newReader(readChannel, "UTF8"));
-	    	String line = reader.readLine();
-	    	// line = "The woods are lovely dark and deep."
-	
-	    	readChannel.close();
-			*/
-	    	
-	    	
-	    	// Now read from the file using the Blobstore API
-	    	this.blobKey = fileService.getBlobKey(file);
-	    	BlobstoreService blobstoreService = BlobstoreServiceFactory.getBlobstoreService();
-	    	return blobstoreService;
-	    	//blobstoreService.serve(blobKey, response);
-	    	/*
-	    	BlobstoreService blobStoreService = BlobstoreServiceFactory.getBlobstoreService();
-	    	String segment = new String(blobStoreService.fetchData(blobKey, 30, 40));
-	    	*/
-    	}
-    	catch(Exception e){
-    		e.getStackTrace();
-    		return null;
-    	}
-    }
-    
+
     public void read(InputStream inputFile) throws IOException {
 		try {
 			Workbook w;
 			
 			w = Workbook.getWorkbook(inputFile);
-			// Get the first sheet
+			
 			Sheet sheet = w.getSheet(0);
-			// Loop over first 10 column and lines
-			//GlobalSingleton.getInstance().setWorkbook(w);
 			
 			for(int row = 1; row <= sheet.getRows(); row++){
 				IncompleteStudent student = new IncompleteStudent();
@@ -236,28 +112,22 @@ public class UploadFile extends HttpServlet {
 				}
 				studentList.add(student);
 			}
-			//GlobalSingleton.getInstance().setStudentList(studentList);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
     
-    public void OrganizeFiles(GoogleDrive drive, PrintWriter out, ArrayList<IncompleteStudent> incompletestudents){
-    //public void OrganizeFiles(GoogleDrive drive, ArrayList<IncompleteStudent> incompletestudents){
+    public void OrganizeFiles(GoogleDrive drive, ArrayList<IncompleteStudent> incompletestudents){
         try {
 
             ArrayList<File> googleDriveFolders = drive.getAllFolders();
-            int counter = 0;
             File autoFolder = drive.getCreateFolder(googleDriveFolders,"AUTO");
             
             for (IncompleteStudent student : incompletestudents) {
                 PrettyStudentPrint psp = new PrettyStudentPrint(student.getLastName() + ", " + student.getFirstName() + ", " + student.getId());
-
-                // Get or Create Folder
+                
                 File studentFolder = drive.getCreateFolder(googleDriveFolders, student.getLastName(), student.getFirstName(), student.getId());
-
-                out.println("<li>" + student.getLastName() + ", " + student.getFirstName() + " - " + ++counter + "</li>");
                 
                 if (!student.getChecklist().equals("")) {
                     for (String checklistitem : student.getChecklist().split("::")) {
@@ -1032,14 +902,12 @@ public class UploadFile extends HttpServlet {
                 drive.MoveFiles(studentFolder, autoFolder);
             }
             
-            out.println("<li><h3>All students processed. Total of students: " + counter + "</h3></li>");
         } catch (Exception ex) {
             Logger.getLogger(UploadFile.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
-    
-    public byte[] printArray(ArrayList<PrettyStudentPrint> pspArray) throws IOException{
+    public String printArray(ArrayList<PrettyStudentPrint> pspArray) throws IOException{
     	StringBuffer buffer = new StringBuffer();
     	String[] tags = {"TSTS", "S05", "SAT", "S01", "S02", "IE11", "IE37", "IE75", "IEW", "IEX", "APO", "APH", "AP25", "APW", "AUD2", "AUDE", "LRE2", "LRE1", "SSC", "COBC", "COMC", "FC", "CON", "CER", "HST", "CLT", "UNO", "TRNE", "D214", "RESP", "ASG", "TREL", "AOS", "ESSY", "AP", "BRAC", "ARTP", "COMT", "MAD", "IEP", "ECE1", "MDHR", "REF3", "ISA", "IELT", "SUPP", "GCEA", "GCEO", "CLEP", "PASS", "COPS", "GRR", "GRRP", "ETR", "ESL", "DEPA", "DEPD", "DACA", "EAC", "IEG", "GED", "BS", "CPE", "F1", "I797", "NEDP", "PAC", "MIDY", "MO", "COOR", "RESU", "RSV", "WES1", "TOEFL", "TAXP", "TSE", "SS", "TAXP", "PRC", "OFEX"};
     	
@@ -1062,9 +930,7 @@ public class UploadFile extends HttpServlet {
             buffer.append("\n");
         }
         
-        byte[] bytes = buffer.toString().getBytes();
-
-        return bytes;
+        return buffer.toString();
     }
     
 }

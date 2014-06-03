@@ -1,9 +1,4 @@
 package edu.morgan.google;
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
@@ -27,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class GoogleDrive {
-///*
 	private static final String CLIENT_ID = "531888765455-d9dq5ldokro9ahi5pjrc56gpolidn35f.apps.googleusercontent.com";
     private static final String CLIENT_SECRET = "NGVNLhbRJhUGUVSAJEgrikUx";
     private static String REDIRECT_URI = "http://1-dot-morgansudrive.appspot.com/Home"; 
@@ -38,12 +32,7 @@ public class GoogleDrive {
     private JsonFactory jsonFactory;
     private GoogleAuthorizationCodeFlow flow;
     private Credential credential;
-//*/
     private Drive service;
-
-    /*
-        CONFIGURATION METHODS
-    */
     
     public GoogleDrive() {
     	this.httpTransport = new NetHttpTransport();
@@ -56,10 +45,20 @@ public class GoogleDrive {
         AUTHORIZATION_URL = this.flow.newAuthorizationUrl().setRedirectUri(REDIRECT_URI).build();
     }
     
+    public GoogleDrive(String redirectUrl) {
+    	REDIRECT_URI = redirectUrl;
+    	this.httpTransport = new NetHttpTransport();
+        this.jsonFactory = new JacksonFactory();
+
+        this.flow = new GoogleAuthorizationCodeFlow.Builder(
+                this.httpTransport, this.jsonFactory, CLIENT_ID, CLIENT_SECRET, Arrays.asList(DriveScopes.DRIVE, DriveScopes.DRIVE_APPDATA, DriveScopes.DRIVE_APPS_READONLY, DriveScopes.DRIVE_FILE, DriveScopes.DRIVE_METADATA_READONLY))
+                .setAccessType("offline")
+                .setApprovalPrompt("force").build();
+        AUTHORIZATION_URL = this.flow.newAuthorizationUrl().setRedirectUri(REDIRECT_URI).build();
+    }
+    
     public void setCode(String code){
-    	///*
     	GOOGLE_TOKEN = code;
-        //this.setService(new Drive.Builder(this.httpTransport, this.jsonFactory, new GoogleCredential().setAccessToken(GOOGLE_TOKEN)).setApplicationName("Files Organized").build());
     	try {
 	    	GoogleTokenResponse response = this.flow.newTokenRequest(GOOGLE_TOKEN).setRedirectUri(REDIRECT_URI).execute();
 			String accessToken = response.getAccessToken();
@@ -97,15 +96,11 @@ public class GoogleDrive {
     }
     
     public File getCreateFolder(ArrayList<File> folders, String lastName, String firstName, String studentID) throws IOException{
-        //File folder = this.getStudentFolder(folders, lastName, firstName, studentID);
-        //if(folder == null)
         File folder = this.makeFolder(lastName, firstName, studentID);
         return folder;
     }
     
     public File getCreateFolder(ArrayList<File> folders, String folderName) throws IOException{
-        //File folder = this.getStudentFolder(folders, folderName, "", "");
-        //if(folder == null)
         File folder = this.makeFolder(folderName, "", "");
         return folder;
     }
@@ -157,9 +152,7 @@ public class GoogleDrive {
         ArrayList<ParentReference> parentsList = new ArrayList<ParentReference>();
         parentsList.add(newParent);
         copiedFile.setParents(parentsList);
-        //file.setParents(parentsList);
-
-        //return (File) this.getService().files().update(file.getId(), file).execute();
+        
         return (File) this.getService().files().copy(file.getId(), copiedFile).execute();
     }
     
@@ -213,12 +206,7 @@ public class GoogleDrive {
         
         return retorno;
     }
-    
-    /*
-     *
-     *  Private methods
-     *
-    */
+
     
     private File makeFolder(String LastName, String FirstName, String ID) throws IOException {
         File body = new File();
@@ -248,7 +236,6 @@ public class GoogleDrive {
         if(args.length != 0)
             for(int index = 0; index < args.length; index++)
                 if(!args[index].equals("")){
-                    //args[index] = args[index].replaceAll("'", "\'");
                     if(index != 0)
                         execution += "and ";
                     execution += operator + " contains \"" + args[index] + "\" ";
